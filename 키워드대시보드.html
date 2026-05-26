@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>삼성드림이비인후과 노원점 · 키워드 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #181c27;
+    --bg3: #1e2333;
+    --border: #2a2f42;
+    --text: #e8eaf0;
+    --text2: #9ba3bc;
+    --text3: #5c6480;
+    --accent: #4f7fff;
+    --green: #34c78a;
+    --orange: #f5a623;
+    --red: #e05252;
+    --purple: #9b7fff;
+    --teal: #2dd4bf;
+    --yellow: #fbbf24;
+
+    --surgery-비중격만곡증수술: #4f7fff;
+    --surgery-비염수술: #34c78a;
+    --surgery-이비인후과: #f5a623;
+    --surgery-축농증수술: #e05252;
+    --surgery-매부리코수술: #9b7fff;
+    --surgery-휜코수술: #2dd4bf;
+    --surgery-코뼈골절수술: #fbbf24;
+    --surgery-기능코성형: #f97316;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  .header-meta {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── LAYOUT ── */
+  .main { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+
+  /* ── LOADING / ERROR ── */
+  #loadingState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text { color: var(--text2); font-size: 14px; }
+
+  #errorState {
+    display: none;
+    background: #2a1a1a;
+    border: 1px solid var(--red);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    margin: 2rem 0;
+  }
+
+  #errorState h3 { color: var(--red); margin-bottom: 8px; }
+  #errorState p { color: var(--text2); font-size: 13px; line-height: 1.6; }
+
+  /* ── DASHBOARD (hidden until loaded) ── */
+  #dashboard { display: none; }
+
+  /* ── METRICS ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .metric:hover { border-color: #3a4060; }
+
+  .metric::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-color, var(--accent));
+  }
+
+  .metric-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent-color, var(--text));
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .metric-sub {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── FILTERS ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    align-items: center;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-right: 4px;
+  }
+
+  select, input[type="text"] {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-family: 'Noto Sans KR', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+    cursor: pointer;
+  }
+
+  select:focus, input:focus { border-color: var(--accent); }
+
+  input[type="text"] {
+    min-width: 200px;
+    cursor: text;
+  }
+
+  input::placeholder { color: var(--text3); }
+
+  .filter-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text3);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.15s;
+  }
+
+  .filter-reset:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* ── CHARTS GRID ── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* ── TABS ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .tab-btn {
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text3);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+    position: relative;
+    top: 1px;
+  }
+
+  .tab-btn:hover { color: var(--text2); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; padding: 1rem; }
+  .tab-content.active { display: block; }
+
+  /* ── TABLE ── */
+  .tbl-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .tbl-wrap {
+    overflow-x: auto;
+    max-height: 420px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg3);
+    color: var(--text3);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #1c2030;
+    vertical-align: middle;
+    color: var(--text2);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg3); color: var(--text); }
+
+  .row-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .kw-text { font-weight: 500; color: var(--text); }
+  .region-text { color: var(--text2); }
+  .date-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .rank-1 { background: #1a3a2a; color: var(--green); border: 1px solid #2a5a3a; }
+  .rank-2-3 { background: #1a2a4a; color: #7fb3ff; border: 1px solid #2a3a6a; }
+  .rank-4-10 { background: #3a2a0a; color: var(--orange); border: 1px solid #5a4a1a; }
+  .rank-11 { background: #2a1a1a; color: var(--red); border: 1px solid #4a2a2a; }
+  .rank-none { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+  .blotab-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    background: #2a1f4a;
+    color: var(--purple);
+    border: 1px solid #3a2f6a;
+    margin-left: 4px;
+  }
+
+  .surgery-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    background: #1a2a4a;
+    color: var(--accent);
+    border: 1px solid #2a3a6a;
+    text-decoration: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .link-btn:hover { background: #2a3a5a; }
+
+  .no-link {
+    font-size: 11px;
+    color: var(--text3);
+    font-style: italic;
+  }
+
+  .tbl-count {
+    font-size: 12px;
+    color: var(--text3);
+    text-align: right;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── SURGERY STATS TAB ── */
+  .surgery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .surgery-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    border-left: 3px solid var(--surgery-color, var(--accent));
+  }
+
+  .surgery-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--surgery-color, var(--text));
+  }
+
+  .surgery-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .surgery-stat { text-align: center; }
+  .surgery-stat-val {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .surgery-stat-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--surgery-color, var(--accent));
+    transition: width 0.6s ease;
+  }
+
+  /* ── REGION TAB ── */
+  .region-search-wrap { margin-bottom: 12px; }
+
+  .region-table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  /* ── PENDING TAB ── */
+  .pending-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #2a1a1a;
+    color: var(--red);
+    border: 1px solid #4a2a2a;
+    margin-left: 6px;
+  }
+
+  /* ── LAST UPDATED ── */
+  #lastUpdated {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── REFRESH BTN ── */
+  .refresh-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .metrics { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .main { padding: 1rem; }
+  }
+
+  @media (max-width: 600px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4060; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    삼성드림이비인후과 노원점 &nbsp;·&nbsp; 키워드 노출 대시보드
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="lastUpdated">데이터 불러오는 중...</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M1 4v6h6M23 20v-6h-6"/>
+        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+      </svg>
+      새로고침
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- 로딩 -->
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <div class="loading-text">구글 시트에서 데이터를 불러오는 중...</div>
+  </div>
+
+  <!-- 에러 -->
+  <div id="errorState">
+    <h3>데이터를 불러올 수 없어요</h3>
+    <p>구글 시트 공유 설정을 확인해주세요.<br>
+    "링크가 있는 모든 사용자 → 뷰어" 로 설정되어 있어야 합니다.<br><br>
+    잠시 후 <strong>새로고침</strong> 버튼을 눌러 다시 시도해보세요.</p>
+  </div>
+
+  <!-- 대시보드 -->
+  <div id="dashboard">
+
+    <!-- 필터 -->
+    <div class="filter-bar">
+      <span class="filter-label">필터</span>
+      <input type="text" id="searchInput" placeholder="키워드 또는 지역 검색..." oninput="render()">
+      <select id="filterSurgery" onchange="render()"><option value="">전체 수술</option></select>
+      <select id="filterBlotab" onchange="render()">
+        <option value="">전체 구분</option>
+        <option value="통합">통합검색</option>
+        <option value="블탭">블탭만</option>
+      </select>
+      <select id="filterRank" onchange="render()">
+        <option value="">전체 순위</option>
+        <option value="1">1위</option>
+        <option value="1-3">1~3위</option>
+        <option value="1-10">10위권</option>
+        <option value="11+">10위 밖</option>
+      </select>
+      <button class="filter-reset" onclick="resetFilters()">초기화</button>
+    </div>
+
+    <!-- 지표 카드 -->
+    <div class="metrics">
+      <div class="metric" style="--accent-color: var(--text)">
+        <div class="metric-label">총 키워드</div>
+        <div class="metric-value" id="mTotal">-</div>
+        <div class="metric-sub" id="mTotalSub">전체 데이터</div>
+      </div>
+      <div class="metric" style="--accent-color: var(--green)">
+        <div class="metric-label">🥇 1위 노출</div>
+        <div class="metric-value" id="m1" style="color:var(--green)">-</div>
+        <div class="metric-sub" id="m1sub">-</div>
+      </div>
+      <div class="metric" style="--accent-color: var(--accent)">
+        <div class="metric-label">🏅 1~3위</div>
+        <div class="metric-value" id="m3" style="color:var(--accent)">-</div>
+        <div class="metric-sub" id="m3sub">-</div>
+      </div>
+      <div class="metric" style="--accent-color: var(--orange)">
+        <div class="metric-label">🎯 10위권</div>
+        <div class="metric-value" id="m10" style="color:var(--orange)">-</div>
+        <div class="metric-sub" id="m10sub">-</div>
+      </div>
+      <div class="metric" style="--accent-color: var(--purple)">
+        <div class="metric-label">📌 블탭</div>
+        <div class="metric-value" id="mBt" style="color:var(--purple)">-</div>
+        <div class="metric-sub" id="mBtSub">블로그탭 전용</div>
+      </div>
+    </div>
+
+    <!-- 차트 -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="card-header">
+          <div class="card-title">수술 종류별 키워드 수</div>
+        </div>
+        <div class="chart-wrap"><canvas id="cSurgery" role="img" aria-label="수술 종류별 키워드 수 막대 차트"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header">
+          <div class="card-title">월별 순위 분포</div>
+        </div>
+        <div class="chart-wrap"><canvas id="cMonth" role="img" aria-label="월별 순위 분포 누적 막대 차트"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 탭 패널 -->
+    <div class="panel">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('list',this)">키워드 목록</button>
+        <button class="tab-btn" onclick="switchTab('surgery',this)">수술별 통계</button>
+        <button class="tab-btn" onclick="switchTab('region',this)">지역별 통계</button>
+        <button class="tab-btn" onclick="switchTab('pending',this)">
+          미업로드
+          <span class="pending-count" id="pendingCount">0</span>
+        </button>
+      </div>
+
+      <!-- 키워드 목록 -->
+      <div id="tab-list" class="tab-content active">
+        <div class="tbl-controls">
+          <select id="sortBy" onchange="render()">
+            <option value="seq">번호순</option>
+            <option value="rank">순위순</option>
+            <option value="date">날짜순</option>
+          </select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">번호</th>
+                <th style="width:90px">날짜</th>
+                <th>키워드</th>
+                <th style="width:110px">수술 종류</th>
+                <th style="width:70px">순위</th>
+                <th style="width:60px">구분</th>
+                <th style="width:70px">링크</th>
+              </tr>
+            </thead>
+            <tbody id="tBody"></tbody>
+          </table>
+        </div>
+        <div class="tbl-count" id="tCount"></div>
+      </div>
+
+      <!-- 수술별 통계 -->
+      <div id="tab-surgery" class="tab-content">
+        <div class="surgery-grid" id="surgeryGrid"></div>
+      </div>
+
+      <!-- 지역별 통계 -->
+      <div id="tab-region" class="tab-content">
+        <div class="region-search-wrap">
+          <input type="text" id="regionSearch" placeholder="지역명 검색..." oninput="renderRegion()" style="width:200px">
+        </div>
+        <div class="region-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>지역</th>
+                <th>총 건수</th>
+                <th>수술 종류</th>
+                <th>1위</th>
+                <th>1~3위</th>
+                <th>10위권</th>
+                <th>블탭</th>
+              </tr>
+            </thead>
+            <tbody id="regionBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 미업로드 -->
+      <div id="tab-pending" class="tab-content">
+        <div style="margin-bottom:12px;font-size:13px;color:var(--text3)">아직 블로그 링크나 순위가 없는 키워드예요.</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">번호</th>
+                <th style="width:90px">날짜</th>
+                <th>키워드</th>
+                <th style="width:110px">수술 종류</th>
+              </tr>
+            </thead>
+            <tbody id="pBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /panel -->
+  </div><!-- /dashboard -->
+</div><!-- /main -->
+
+<script>
+// ── 구글 시트 ID ──
+const SHEET_ID = '1FUEmNsJCGe8L7K3BvVLOc59sY0OWVtOkERvl065hdY8';
+
+// ── 수술 종류 색상 ──
+const SURGERY_COLORS = {
+  '비중격만곡증수술': '#4f7fff',
+  '비염수술':       '#34c78a',
+  '이비인후과':     '#f5a623',
+  '축농증수술':     '#e05252',
+  '매부리코수술':   '#9b7fff',
+  '휜코수술':       '#2dd4bf',
+  '코뼈골절수술':   '#fbbf24',
+  '기능코성형':     '#f97316',
+};
+const SURGERY_LIST = Object.keys(SURGERY_COLORS);
+
+let RAW = [];
+let cSurgeryInst = null, cMonthInst = null;
+
+// ── 데이터 로드 ──
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  document.getElementById('loadingState').style.display = 'flex';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'none';
+
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+
+  try {
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error('fetch failed');
+    const text = await res.text();
+    RAW = parseCSV(text);
+
+    if (RAW.length === 0) throw new Error('empty');
+
+    initFilters();
+    render();
+    renderPending();
+
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('lastUpdated').textContent = '업데이트: ' + new Date().toLocaleString('ko-KR');
+  } catch (e) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('lastUpdated').textContent = '불러오기 실패';
+  }
+
+  btn.classList.remove('spinning');
+}
+
+// ── CSV 파싱 ──
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const result = [];
+
+  for (const line of lines) {
+    const cols = parseCSVLine(line);
+    if (!cols[0] || isNaN(parseInt(cols[0]))) continue;
+
+    const seq = parseInt(cols[0]);
+    const dateRaw = (cols[1] || '').trim();
+    const keyword = (cols[2] || '').trim();
+    const url = (cols[3] || '').trim();
+    const rankRaw = (cols[4] || '').trim();
+    const bigo = (cols[5] || '').trim();
+
+    if (!keyword) continue;
+
+    // 날짜 파싱
+    let date = '', month = '';
+    const m1 = dateRaw.match(/(\d{1,2})월\s*(\d{1,2})일/);
+    const m2 = dateRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m1) {
+      const now = new Date();
+      let year = now.getFullYear();
+      const mo = parseInt(m1[1]);
+      // 12월이면 전년도
+      if (mo === 12 && now.getMonth() < 6) year--;
+      date = `${year}-${String(mo).padStart(2,'0')}-${String(parseInt(m1[2])).padStart(2,'0')}`;
+      month = `${year}-${String(mo).padStart(2,'0')}`;
+    } else if (m2) {
+      date = dateRaw.substring(0,10);
+      month = dateRaw.substring(0,7);
+    } else {
+      date = dateRaw;
+      month = dateRaw.substring(0,7);
+    }
+
+    // 수술 종류 추출
+    let surgery = '기타';
+    for (const s of SURGERY_LIST) {
+      if (keyword.includes(s)) { surgery = s; break; }
+    }
+
+    // 지역 추출
+    let region = keyword;
+    for (const s of SURGERY_LIST) region = region.replace(s, '').trim();
+
+    // 순위
+    let rank = null;
+    if (rankRaw && rankRaw !== '-' && rankRaw !== '') {
+      const r = parseInt(rankRaw);
+      if (!isNaN(r)) rank = r;
+    }
+
+    const is_blotab = bigo.includes('블탭');
+
+    result.push({ seq, date, month, keyword, region, surgery, url, rank, is_blotab });
+  }
+
+  return result;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') {
+      inQ = !inQ;
+    } else if (line[i] === ',' && !inQ) {
+      result.push(cur); cur = '';
+    } else {
+      cur += line[i];
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── 필터 초기화 ──
+function initFilters() {
+  const sel = document.getElementById('filterSurgery');
+  sel.innerHTML = '<option value="">전체 수술</option>';
+  const surgeries = [...new Set(RAW.map(d => d.surgery))].sort();
+  surgeries.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterSurgery').value = '';
+  document.getElementById('filterBlotab').value = '';
+  document.getElementById('filterRank').value = '';
+  document.getElementById('sortBy').value = 'seq';
+  render();
+}
+
+// ── 필터 적용 ──
+function getFiltered() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const s = document.getElementById('filterSurgery').value;
+  const b = document.getElementById('filterBlotab').value;
+  const r = document.getElementById('filterRank').value;
+
+  return RAW.filter(d => {
+    if (q && !d.keyword.toLowerCase().includes(q) && !d.region.toLowerCase().includes(q)) return false;
+    if (s && d.surgery !== s) return false;
+    if (b === '블탭' && !d.is_blotab) return false;
+    if (b === '통합' && d.is_blotab) return false;
+    if (r === '1' && d.rank !== 1) return false;
+    if (r === '1-3' && (d.rank === null || d.rank > 3)) return false;
+    if (r === '1-10' && (d.rank === null || d.rank > 10)) return false;
+    if (r === '11+' && (d.rank === null || d.rank <= 10)) return false;
+    return true;
+  });
+}
+
+// ── 배지 ──
+function rankBadge(rank) {
+  if (rank === null) return '<span class="badge rank-none">미확인</span>';
+  if (rank === 1) return `<span class="badge rank-1">🥇 1위</span>`;
+  if (rank <= 3) return `<span class="badge rank-2-3">${rank}위</span>`;
+  if (rank <= 10) return `<span class="badge rank-4-10">${rank}위</span>`;
+  return `<span class="badge rank-11">${rank}위</span>`;
+}
+
+function surgeryBadge(s) {
+  const c = SURGERY_COLORS[s] || '#888';
+  return `<span class="surgery-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${s}</span>`;
+}
+
+// ── 메인 렌더 ──
+function render() {
+  const f = getFiltered();
+  const sortBy = document.getElementById('sortBy').value;
+
+  const sorted = [...f].sort((a, b) => {
+    if (sortBy === 'rank') {
+      if (a.rank === null && b.rank === null) return 0;
+      if (a.rank === null) return 1;
+      if (b.rank === null) return -1;
+      return a.rank - b.rank;
+    }
+    if (sortBy === 'date') return a.date.localeCompare(b.date);
+    return a.seq - b.seq;
+  });
+
+  const ranked = f.filter(d => d.rank !== null);
+  const r1 = ranked.filter(d => d.rank === 1).length;
+  const r3 = ranked.filter(d => d.rank <= 3).length;
+  const r10 = ranked.filter(d => d.rank <= 10).length;
+  const bt = f.filter(d => d.is_blotab).length;
+
+  // 지표
+  document.getElementById('mTotal').textContent = f.length;
+  document.getElementById('mTotalSub').textContent = `전체 ${RAW.length}건 중 ${f.length}건`;
+  document.getElementById('m1').textContent = r1;
+  document.getElementById('m1sub').textContent = ranked.length ? Math.round(r1/ranked.length*100)+'%' : '0%';
+  document.getElementById('m3').textContent = r3;
+  document.getElementById('m3sub').textContent = ranked.length ? Math.round(r3/ranked.length*100)+'%' : '0%';
+  document.getElementById('m10').textContent = r10;
+  document.getElementById('m10sub').textContent = ranked.length ? Math.round(r10/ranked.length*100)+'%' : '0%';
+  document.getElementById('mBt').textContent = bt;
+  document.getElementById('mBtSub').textContent = f.length ? Math.round(bt/f.length*100)+'% (블로그탭)' : '0%';
+
+  // 테이블
+  document.getElementById('tBody').innerHTML = sorted.map(d => `
+    <tr>
+      <td class="row-num">${d.seq}</td>
+      <td class="date-text">${d.date}</td>
+      <td>
+        <span class="kw-text">${d.region}</span>
+        &nbsp;${surgeryBadge(d.surgery)}
+        ${d.is_blotab ? '<span class="blotab-badge">블탭</span>' : ''}
+      </td>
+      <td>${surgeryBadge(d.surgery)}</td>
+      <td>${rankBadge(d.rank)}</td>
+      <td style="font-size:12px;color:${d.is_blotab ? 'var(--purple)' : 'var(--text3)'}">
+        ${d.is_blotab ? '블탭' : '통합'}
+      </td>
+      <td>
+        ${d.url
+          ? `<a class="link-btn" href="${d.url}" target="_blank">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              링크
+            </a>`
+          : '<span class="no-link">미등록</span>'}
+      </td>
+    </tr>`).join('');
+  document.getElementById('tCount').textContent = `${sorted.length}건 표시`;
+
+  // 차트 - 수술별
+  const sCnts = SURGERY_LIST.map(s => f.filter(d => d.surgery === s).length);
+  if (cSurgeryInst) cSurgeryInst.destroy();
+  cSurgeryInst = new Chart(document.getElementById('cSurgery'), {
+    type: 'bar',
+    data: {
+      labels: SURGERY_LIST.map(s => s.length > 6 ? s.slice(0,6)+'…' : s),
+      datasets: [{
+        data: sCnts,
+        backgroundColor: SURGERY_LIST.map(s => SURGERY_COLORS[s] + '99'),
+        borderColor: SURGERY_LIST.map(s => SURGERY_COLORS[s]),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9ba3bc', font: { size: 10 }, autoSkip: false }, grid: { color: '#2a2f42' } },
+        y: { beginAtZero: true, ticks: { color: '#9ba3bc', stepSize: 5 }, grid: { color: '#2a2f42' } }
+      }
+    }
+  });
+
+  // 차트 - 월별
+  const months = [...new Set(RAW.map(d => d.month))].sort();
+  const displayMonths = months.slice(-6);
+  const mData = displayMonths.map(m => {
+    const rows = f.filter(d => d.month === m);
+    return {
+      r1: rows.filter(d => d.rank === 1).length,
+      r3: rows.filter(d => d.rank && d.rank > 1 && d.rank <= 3).length,
+      r10: rows.filter(d => d.rank && d.rank > 3 && d.rank <= 10).length,
+      rX: rows.filter(d => d.rank && d.rank > 10).length,
+      none: rows.filter(d => d.rank === null).length,
+    };
+  });
+
+  if (cMonthInst) cMonthInst.destroy();
+  cMonthInst = new Chart(document.getElementById('cMonth'), {
+    type: 'bar',
+    data: {
+      labels: displayMonths.map(m => m.replace(/20\d\d-/, '').replace('-','/')),
+      datasets: [
+        { label: '1위', data: mData.map(d => d.r1), backgroundColor: '#34c78a99', borderColor: '#34c78a', borderWidth: 1, borderRadius: 4 },
+        { label: '2~3위', data: mData.map(d => d.r3), backgroundColor: '#4f7fff99', borderColor: '#4f7fff', borderWidth: 1 },
+        { label: '4~10위', data: mData.map(d => d.r10), backgroundColor: '#f5a62399', borderColor: '#f5a623', borderWidth: 1 },
+        { label: '10위+', data: mData.map(d => d.rX), backgroundColor: '#e0525299', borderColor: '#e05252', borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { color: '#9ba3bc', boxWidth: 10, font: { size: 10 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#9ba3bc', font: { size: 10 } }, grid: { color: '#2a2f42' } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: '#9ba3bc' }, grid: { color: '#2a2f42' } }
+      }
+    }
+  });
+
+  // 수술별 통계 카드
+  const surgeryGrid = document.getElementById('surgeryGrid');
+  surgeryGrid.innerHTML = SURGERY_LIST.map(s => {
+    const rows = f.filter(d => d.surgery === s);
+    if (!rows.length) return '';
+    const rk = rows.filter(d => d.rank !== null);
+    const s1 = rk.filter(d => d.rank === 1).length;
+    const s3 = rk.filter(d => d.rank <= 3).length;
+    const s10 = rk.filter(d => d.rank <= 10).length;
+    const sbt = rows.filter(d => d.is_blotab).length;
+    const sp = rows.filter(d => !d.url).length;
+    const pct = rk.length ? Math.round(s1/rk.length*100) : 0;
+    const color = SURGERY_COLORS[s];
+    return `
+      <div class="surgery-card" style="--surgery-color:${color}">
+        <div class="surgery-card-title">${s}</div>
+        <div class="surgery-stats">
+          <div class="surgery-stat">
+            <div class="surgery-stat-val">${rows.length}</div>
+            <div class="surgery-stat-label">총 건수</div>
+          </div>
+          <div class="surgery-stat">
+            <div class="surgery-stat-val" style="color:${color}">${s1}</div>
+            <div class="surgery-stat-label">1위</div>
+          </div>
+          <div class="surgery-stat">
+            <div class="surgery-stat-val">${rk.length ? Math.round(s10/rk.length*100) : 0}%</div>
+            <div class="surgery-stat-label">10위권율</div>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%;--surgery-color:${color}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text3)">
+          <span>1~3위: ${s3}건</span>
+          <span>블탭: ${sbt}건</span>
+          <span style="color:${sp?'var(--red)':'inherit'}">미등록: ${sp}건</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // 지역별 통계
+  renderRegion(f);
+}
+
+// ── 지역별 렌더 ──
+function renderRegion(filteredData) {
+  const f = filteredData || getFiltered();
+  const q = (document.getElementById('regionSearch')?.value || '').toLowerCase();
+
+  const regionMap = {};
+  f.forEach(d => {
+    if (!regionMap[d.region]) regionMap[d.region] = [];
+    regionMap[d.region].push(d);
+  });
+
+  const regions = Object.keys(regionMap)
+    .filter(r => !q || r.toLowerCase().includes(q))
+    .sort((a, b) => regionMap[b].length - regionMap[a].length);
+
+  document.getElementById('regionBody').innerHTML = regions.map(r => {
+    const rows = regionMap[r];
+    const rk = rows.filter(d => d.rank !== null);
+    const s1 = rk.filter(d => d.rank === 1).length;
+    const s3 = rk.filter(d => d.rank <= 3).length;
+    const s10 = rk.filter(d => d.rank <= 10).length;
+    const bt = rows.filter(d => d.is_blotab).length;
+    const surgeries = [...new Set(rows.map(d => d.surgery))];
+    return `
+      <tr>
+        <td style="font-weight:500;color:var(--text)">${r}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--text2)">${rows.length}</td>
+        <td>${surgeries.map(s => surgeryBadge(s)).join(' ')}</td>
+        <td>${s1 > 0 ? `<span class="badge rank-1">${s1}</span>` : '<span style="color:var(--text3)">-</span>'}</td>
+        <td style="color:var(--text2)">${rk.length ? Math.round(s3/rk.length*100)+'%' : '-'}</td>
+        <td style="color:var(--text2)">${rk.length ? Math.round(s10/rk.length*100)+'%' : '-'}</td>
+        <td style="color:var(--purple)">${bt || '-'}</td>
+      </tr>`;
+  }).join('');
+}
+
+// ── 미업로드 렌더 ──
+function renderPending() {
+  const pending = RAW.filter(d => !d.url || d.rank === null);
+  document.getElementById('pendingCount').textContent = pending.length;
+  document.getElementById('pBody').innerHTML = pending.map(d => `
+    <tr>
+      <td class="row-num">${d.seq}</td>
+      <td class="date-text">${d.date}</td>
+      <td><span class="kw-text">${d.keyword}</span></td>
+      <td>${surgeryBadge(d.surgery)}</td>
+    </tr>`).join('');
+}
+
+// ── 탭 전환 ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'region') renderRegion();
+}
+
+// ── 지역 검색 ──
+document.addEventListener('DOMContentLoaded', () => {
+  const rs = document.getElementById('regionSearch');
+  if (rs) rs.addEventListener('input', () => renderRegion());
+  loadData();
+});
+</script>
+</body>
+</html>
