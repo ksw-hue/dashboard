@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>삼성드림이비인후과 · 키워드 지도</title>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=e76a5dcb62ebc721dcb7730cc4d7233c&libraries=services"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: #0f1117; color: #e8eaf0; height: 100vh; display: flex; flex-direction: column; }
+
+header {
+  background: #181c27;
+  border-bottom: 1px solid #2a2f42;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  flex-shrink: 0;
+}
+.logo { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #4f7fff; box-shadow: 0 0 8px #4f7fff; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.85)} }
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 10px 1.5rem;
+  background: #181c27;
+  border-bottom: 1px solid #2a2f42;
+  flex-wrap: wrap;
+}
+
+select, input {
+  background: #1e2333;
+  border: 1px solid #2a2f42;
+  color: #e8eaf0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none;
+}
+select:focus, input:focus { border-color: #4f7fff; }
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #9ba3bc;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+.content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+#map { flex: 1; }
+
+.sidebar {
+  width: 340px;
+  background: #181c27;
+  border-left: 1px solid #2a2f42;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 1rem;
+  border-bottom: 1px solid #2a2f42;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ba3bc;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.sidebar-content { overflow-y: auto; flex: 1; }
+
+.region-item {
+  padding: 12px 1rem;
+  border-bottom: 1px solid #1c2030;
+  cursor: pointer;
+  transition: background .15s;
+}
+.region-item:hover { background: #1e2333; }
+.region-item.active { background: #1a2a4a; border-left: 3px solid #4f7fff; }
+
+.region-name { font-size: 14px; font-weight: 500; color: #e8eaf0; margin-bottom: 4px; }
+.region-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.badge {
+  display: inline-flex;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+}
+.b1 { background: #1a3a2a; color: #34c78a; border: 1px solid #2a5a3a; }
+.b2 { background: #1a2a4a; color: #7fb3ff; border: 1px solid #2a3a6a; }
+.b3 { background: #3a2a0a; color: #f5a623; border: 1px solid #5a4a1a; }
+.b4 { background: #2a1a1a; color: #e05252; border: 1px solid #4a2a2a; }
+.bx { background: #1e2333; color: #5c6480; border: 1px solid #2a2f42; }
+.bt { background: #2a1f4a; color: #9b7fff; border: 1px solid #3a2f6a; font-size: 10px; }
+
+.surgery-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* 팝업 */
+.popup-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #181c27;
+  border: 1px solid #2a2f42;
+  border-radius: 14px;
+  padding: 1.5rem;
+  width: 360px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.popup-wrap.show { display: block; }
+.popup-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.popup-title { font-size: 16px; font-weight: 700; }
+.popup-close { background: none; border: none; color: #9ba3bc; cursor: pointer; font-size: 20px; line-height: 1; }
+.popup-close:hover { color: #e8eaf0; }
+.popup-kw { padding: 8px 0; border-bottom: 1px solid #1c2030; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.popup-kw:last-child { border-bottom: none; }
+.popup-kw-text { font-size: 13px; color: #e8eaf0; flex: 1; }
+.popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 999; display: none; }
+.popup-overlay.show { display: block; }
+
+/* 로딩 */
+#loadingOverlay {
+  position: fixed; inset: 0;
+  background: #0f1117;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 9999;
+}
+.spinner { width: 40px; height: 40px; border: 3px solid #2a2f42; border-top-color: #4f7fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: #9ba3bc; font-size: 14px; }
+
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 12px;
+  color: #9ba3bc;
+  font-family: 'DM Mono', monospace;
+}
+.stat-val { color: #e8eaf0; font-weight: 600; margin-left: 4px; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #181c27; }
+::-webkit-scrollbar-thumb { background: #2a2f42; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">지도 데이터 불러오는 중...</div>
+</div>
+
+<div class="popup-overlay" id="overlay" onclick="closePopup()"></div>
+<div class="popup-wrap" id="popup">
+  <div class="popup-header">
+    <div class="popup-title" id="popupTitle"></div>
+    <button class="popup-close" onclick="closePopup()">×</button>
+  </div>
+  <div id="popupBody"></div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    삼성드림이비인후과 노원점 · 키워드 지도
+  </div>
+  <div class="stats-bar">
+    <span>총<span class="stat-val" id="statTotal">-</span>건</span>
+    <span>1위<span class="stat-val" id="stat1" style="color:#34c78a">-</span>건</span>
+    <span>지역<span class="stat-val" id="statRegion">-</span>곳</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <select id="filterSurgery" onchange="applyFilter()"><option value="">전체 수술</option></select>
+  <select id="filterRank" onchange="applyFilter()">
+    <option value="">전체 순위</option>
+    <option value="1">1위</option>
+    <option value="1-3">1~3위</option>
+    <option value="1-10">10위권</option>
+    <option value="11+">10위 밖</option>
+  </select>
+  <select id="filterBlotab" onchange="applyFilter()">
+    <option value="">전체 구분</option>
+    <option value="통합">통합검색</option>
+    <option value="블탭">블탭만</option>
+  </select>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#34c78a"></div>1위</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4f7fff"></div>2~3위</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f5a623"></div>4~10위</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e05252"></div>10위+</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9ba3bc"></div>미확인</div>
+  </div>
+</div>
+
+<div class="content">
+  <div id="map"></div>
+  <div class="sidebar">
+    <div class="sidebar-header">지역 목록 <span id="regionCount" style="font-weight:400;color:#5c6480"></span></div>
+    <div class="sidebar-content" id="sidebarList"></div>
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '1FUEmNsJCGe8L7K3BvVLOc59sY0OWVtOkERvl065hdY8';
+const SURGERY_COLORS = {
+  '비중격만곡증수술':'#4f7fff','비염수술':'#34c78a','이비인후과':'#f5a623',
+  '축농증수술':'#e05252','매부리코수술':'#9b7fff','휜코수술':'#2dd4bf',
+  '코뼈골절수술':'#fbbf24','기능코성형':'#f97316'
+};
+const SURGERY_LIST = Object.keys(SURGERY_COLORS);
+
+let RAW = [], filtered = [], map, markers = [], geocoder, activeMarker = null;
+
+// 순위별 색상
+function rankColor(rank) {
+  if (rank === null) return '#9ba3bc';
+  if (rank === 1) return '#34c78a';
+  if (rank <= 3) return '#4f7fff';
+  if (rank <= 10) return '#f5a623';
+  return '#e05252';
+}
+
+// 순위 배지 클래스
+function rankBadgeClass(rank) {
+  if (rank === null) return 'bx';
+  if (rank === 1) return 'b1';
+  if (rank <= 3) return 'b2';
+  if (rank <= 10) return 'b3';
+  return 'b4';
+}
+
+function rankLabel(rank) {
+  if (rank === null) return '미확인';
+  return rank + '위';
+}
+
+// CSV 파싱
+function parseCSVLine(line) {
+  const r=[]; let c='',q=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){q=!q}
+    else if(line[i]===','&&!q){r.push(c);c=''}
+    else{c+=line[i]}
+  }
+  r.push(c); return r;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const result = [];
+  for (const line of lines) {
+    const cols = parseCSVLine(line);
+    if (!cols[0] || isNaN(parseInt(cols[0]))) continue;
+    const keyword = (cols[2]||'').trim();
+    if (!keyword) continue;
+    const dateRaw = (cols[1]||'').trim();
+    let date='',month='';
+    const m1=dateRaw.match(/(\d{1,2})월\s*(\d{1,2})일/);
+    const m2=dateRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if(m1){
+      let y=new Date().getFullYear();
+      const mo=parseInt(m1[1]);
+      if(mo===12&&new Date().getMonth()<6)y--;
+      date=`${y}-${String(mo).padStart(2,'0')}-${String(parseInt(m1[2])).padStart(2,'0')}`;
+      month=`${y}-${String(mo).padStart(2,'0')}`;
+    } else if(m2){date=dateRaw.substring(0,10);month=dateRaw.substring(0,7);}
+    let surgery='기타';
+    for(const s of SURGERY_LIST){if(keyword.includes(s)){surgery=s;break;}}
+    let region=keyword;
+    for(const s of SURGERY_LIST)region=region.replace(s,'').trim();
+    const rankRaw=(cols[4]||'').trim();
+    let rank=null;
+    if(rankRaw&&rankRaw!=='-'&&rankRaw!==''){const r=parseInt(rankRaw);if(!isNaN(r))rank=r;}
+    const bigo=(cols[5]||'').trim();
+    result.push({
+      seq:parseInt(cols[0]),date,month,keyword,region,surgery,
+      url:(cols[3]||'').trim(),rank,is_blotab:bigo.includes('블탭')
+    });
+  }
+  return result;
+}
+
+// 지역별 그룹핑
+function groupByRegion(data) {
+  const map = {};
+  data.forEach(d => {
+    if (!map[d.region]) map[d.region] = [];
+    map[d.region].push(d);
+  });
+  return map;
+}
+
+// 지역 대표 순위 (1위 있으면 1위, 아니면 최소 순위)
+function regionBestRank(rows) {
+  const ranked = rows.filter(r => r.rank !== null);
+  if (!ranked.length) return null;
+  return Math.min(...ranked.map(r => r.rank));
+}
+
+// 마커 생성
+function createMarkerImage(color, count) {
+  const size = count > 5 ? 36 : count > 2 ? 30 : 24;
+  return {
+    src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+      <svg width="${size+8}" height="${size+8}" viewBox="0 0 ${size+8} ${size+8}" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="${(size+8)/2}" cy="${(size+8)/2}" r="${size/2}" fill="${color}" fill-opacity="0.9" stroke="white" stroke-width="2"/>
+        <text x="${(size+8)/2}" y="${(size+8)/2+4}" text-anchor="middle" fill="white" font-size="${size > 30 ? 13 : 11}" font-weight="bold" font-family="Arial">${count}</text>
+      </svg>`)}`,
+    size: new kakao.maps.Size(size+8, size+8),
+    anchor: new kakao.maps.Point((size+8)/2, (size+8)/2)
+  };
+}
+
+let geocodeQueue = [];
+let geocodeTimer = null;
+
+async function geocodeRegion(region) {
+  return new Promise((resolve) => {
+    geocoder.addressSearch(region, (result, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        resolve({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
+      } else {
+        // 키워드 검색으로 재시도
+        geocoder.keywordSearch(region + ' 서울', (r2, s2) => {
+          if (s2 === kakao.maps.services.Status.OK) {
+            resolve({ lat: parseFloat(r2[0].y), lng: parseFloat(r2[0].x) });
+          } else {
+            resolve(null);
+          }
+        });
+      }
+    });
+  });
+}
+
+async function renderMap() {
+  // 기존 마커 제거
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+
+  const regionMap = groupByRegion(filtered);
+  const regions = Object.keys(regionMap);
+
+  document.getElementById('regionCount').textContent = `(${regions.length}곳)`;
+  document.getElementById('statTotal').textContent = filtered.length;
+  document.getElementById('stat1').textContent = filtered.filter(d => d.rank === 1).length;
+  document.getElementById('statRegion').textContent = regions.length;
+
+  // 사이드바
+  const sorted = regions.sort((a,b) => {
+    const ra = regionBestRank(regionMap[a]);
+    const rb = regionBestRank(regionMap[b]);
+    if (ra === null && rb === null) return 0;
+    if (ra === null) return 1;
+    if (rb === null) return -1;
+    return ra - rb;
+  });
+
+  document.getElementById('sidebarList').innerHTML = sorted.map(r => {
+    const rows = regionMap[r];
+    const best = regionBestRank(rows);
+    const surgeries = [...new Set(rows.map(d => d.surgery))];
+    const bt = rows.filter(d => d.is_blotab).length;
+    return `
+      <div class="region-item" id="ri-${r}" onclick="focusRegion('${r}')">
+        <div class="region-name">${r} <span style="font-size:11px;color:#5c6480;font-weight:400">${rows.length}건</span></div>
+        <div class="region-meta">
+          <span class="badge ${rankBadgeClass(best)}">${rankLabel(best)}</span>
+          ${surgeries.slice(0,2).map(s=>`<span class="surgery-tag" style="background:${SURGERY_COLORS[s]||'#888'}22;color:${SURGERY_COLORS[s]||'#888'}">${s}</span>`).join('')}
+          ${bt ? `<span class="badge bt">블탭 ${bt}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  // 지도 마커 생성 (순차적으로 지오코딩)
+  for (const region of regions) {
+    const rows = regionMap[region];
+    const best = regionBestRank(rows);
+    const color = rankColor(best);
+    const coords = await geocodeRegion(region);
+    if (!coords) continue;
+
+    const imgInfo = createMarkerImage(color, rows.length);
+    const markerImage = new kakao.maps.MarkerImage(imgInfo.src, imgInfo.size, { offset: imgInfo.anchor });
+    const marker = new kakao.maps.Marker({
+      position: new kakao.maps.LatLng(coords.lat, coords.lng),
+      image: markerImage,
+      map: map,
+      title: region
+    });
+
+    kakao.maps.event.addListener(marker, 'click', () => showPopup(region, rows, marker));
+    markers.push(marker);
+
+    // 짧은 딜레이로 API 부하 방지
+    await new Promise(r => setTimeout(r, 80));
+  }
+}
+
+function showPopup(region, rows, marker) {
+  document.getElementById('popupTitle').textContent = region;
+  document.getElementById('popupBody').innerHTML = rows.map(d => `
+    <div class="popup-kw">
+      <div class="popup-kw-text">
+        <span class="surgery-tag" style="background:${SURGERY_COLORS[d.surgery]||'#888'}22;color:${SURGERY_COLORS[d.surgery]||'#888'};margin-right:4px">${d.surgery}</span>
+        ${d.region} ${d.surgery}
+        ${d.is_blotab ? '<span class="badge bt" style="margin-left:4px">블탭</span>' : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span class="badge ${rankBadgeClass(d.rank)}">${rankLabel(d.rank)}</span>
+        ${d.url ? `<a href="${d.url}" target="_blank" style="color:#4f7fff;font-size:11px">링크</a>` : ''}
+      </div>
+    </div>`).join('');
+  document.getElementById('popup').classList.add('show');
+  document.getElementById('overlay').classList.add('show');
+
+  // 사이드바 활성화
+  document.querySelectorAll('.region-item').forEach(el => el.classList.remove('active'));
+  const ri = document.getElementById(`ri-${region}`);
+  if (ri) { ri.classList.add('active'); ri.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+}
+
+function closePopup() {
+  document.getElementById('popup').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function focusRegion(region) {
+  const marker = markers.find(m => m.getTitle() === region);
+  if (marker) {
+    map.panTo(marker.getPosition());
+    map.setLevel(5);
+    setTimeout(() => {
+      const rows = groupByRegion(filtered)[region] || [];
+      showPopup(region, rows, marker);
+    }, 300);
+  }
+}
+
+function applyFilter() {
+  const s = document.getElementById('filterSurgery').value;
+  const r = document.getElementById('filterRank').value;
+  const b = document.getElementById('filterBlotab').value;
+  filtered = RAW.filter(d => {
+    if (s && d.surgery !== s) return false;
+    if (b === '블탭' && !d.is_blotab) return false;
+    if (b === '통합' && d.is_blotab) return false;
+    if (r === '1' && d.rank !== 1) return false;
+    if (r === '1-3' && (d.rank === null || d.rank > 3)) return false;
+    if (r === '1-10' && (d.rank === null || d.rank > 10)) return false;
+    if (r === '11+' && (d.rank === null || d.rank <= 10)) return false;
+    return true;
+  });
+  renderMap();
+}
+
+async function init() {
+  // 지도 초기화
+  map = new kakao.maps.Map(document.getElementById('map'), {
+    center: new kakao.maps.LatLng(37.654, 127.056),
+    level: 8
+  });
+  geocoder = new kakao.maps.services.Geocoder();
+
+  // 데이터 로드
+  try {
+    const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`);
+    const text = await res.text();
+    RAW = parseCSV(text);
+    filtered = [...RAW];
+
+    // 필터 옵션
+    const surgeries = [...new Set(RAW.map(d => d.surgery))].sort();
+    const sel = document.getElementById('filterSurgery');
+    surgeries.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+
+    document.getElementById('loadingOverlay').style.display = 'none';
+    renderMap();
+  } catch(e) {
+    document.querySelector('.loading-text').textContent = '데이터 불러오기 실패 — 새로고침 해주세요';
+  }
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
